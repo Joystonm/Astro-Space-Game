@@ -55,6 +55,7 @@ BULLET_IMG = os.path.join(IMAGES_DIR, "bullet.png")
 BACKGROUND_IMG = os.path.join(IMAGES_DIR, "seamless_space.png")
 BACKGROUND_BIG_IMG = os.path.join(IMAGES_DIR, "bg_big.png")
 BACKGROUND_SPACE3_IMG = os.path.join(IMAGES_DIR, "space3.jpg")
+BACKGROUND_MENU_IMG = os.path.join(IMAGES_DIR, "background_menu.jpg")
 PLAYER_EXPLODED_IMG = os.path.join(IMAGES_DIR, "ship_exploded.png")
 
 # Power-up images (we'll create colored rectangles for now)
@@ -80,12 +81,7 @@ STATE_GAMEPLAY = 3
 STATE_PAUSE = 4
 STATE_GAME_OVER = 5
 STATE_SETTINGS = 6
+STATE_BEST_SCORE = 7
 
-# Game states
-STATE_SPLASH = 0
-STATE_MENU = 1
-STATE_INSTRUCTIONS = 2
-STATE_GAMEPLAY = 3
-STATE_PAUSE = 4
-STATE_GAME_OVER = 5
-STATE_SETTINGS = 6
+# High score file
+HIGH_SCORE_FILE = os.path.join(BASE_DIR, "high_score.txt")

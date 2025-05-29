@@ -105,6 +105,7 @@ def load_assets():
         assets['background'] = load_image(BACKGROUND_IMG)
         assets['background_big'] = load_image(BACKGROUND_BIG_IMG)
         assets['background_space3'] = load_image(BACKGROUND_SPACE3_IMG)
+        assets['background_menu'] = load_image(BACKGROUND_MENU_IMG)
         assets['bullet'] = load_image(BULLET_IMG)
         assets['player_exploded'] = load_image(PLAYER_EXPLODED_IMG)
         
@@ -135,12 +136,6 @@ def load_assets():
         life_powerup = pygame.Surface(powerup_size)
         life_powerup.fill(RED)
         assets['powerup_life'] = life_powerup
-        
-        # Load powerup images
-        assets['powerup_double'] = load_image(POWERUP_DOUBLE_IMG)
-        assets['powerup_shield'] = load_image(POWERUP_SHIELD_IMG)
-        assets['powerup_speed'] = load_image(POWERUP_SPEED_IMG)
-        assets['powerup_life'] = load_image(POWERUP_LIFE_IMG)
     except Exception as e:
         print(f"Error loading images: {e}")
         # Create placeholder images

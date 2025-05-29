@@ -1,34 +1,38 @@
 # Astro Space Game
 
-A 2D Top-Down Space Shooter featuring arcade-style gameplay, colorful visuals, thrilling enemy waves, power-ups, and immersive sound effects.
+A 2D Top-Down Space Shooter featuring arcade-style gameplay, colorful visuals, thrilling asteroid waves, power-ups, and immersive sound effects.
 
 ## Game Flow
 
 ### Screens and Transitions
 - **Splash Screen**: A short animation of the Astro Space logo with background music.
-- **Main Menu**: Start Game, Instructions, Settings, Quit.
+- **Main Menu**: Start Game, Best Score, Instructions, Settings, Quit.
+- **Best Score**: Displays the highest score achieved.
 - **Instructions**: Shows controls, game objective, and guide to power-ups.
-- **Gameplay Screen**: Main arena where player, enemies, bullets interact.
+- **Gameplay Screen**: Main arena where player, asteroids, bullets interact.
 - **Pause Menu**: Allows resume, return to main menu, or quit.
 - **Game Over Screen**: Displays final score and buttons to Retry or Exit.
 
 ## Visual Design
 
 ### Background
-- Use `seamless_space.png` for infinite starfield scroll.
-- Layer with `bg_big.png` or `space3.jpg` for parallax effect.
+- `seamless_space.png` for infinite starfield scroll during gameplay.
+- `background_menu.jpg` for menu screens with semi-transparent overlays.
+- `bg_big.png` and `space3.jpg` available for parallax effects.
 
 ### Sprites
-- `ship.png`: Player ship with smooth directional animation.
+- `ship.png`: Player ship with directional movement.
 - `asteroid.png`: Rotates while falling to simulate tumbling in space.
-- `bullet.png`: Glowing trail or effect for futuristic shooting.
-- `ship_exploded.png`: Fade-out or sprite-sheet explosion on player death.
+- `bullet.png`: Projectile fired by the player.
+- `ship_exploded.png`: Used when player is destroyed.
 
 ### UI Design
 - **Font**: `simkai.ttf` styled in white or neon blue with drop shadows.
 - **Buttons**: Rounded with hover and click color transitions.
-- **Score & Lives**: Positioned top-left in digital sci-fi style.
+- **Score**: Positioned top-left in digital sci-fi style.
+- **Lives**: Displayed as small ship icons.
 - **Health bar**: Top-right, with smooth transition animations.
+- **Power-up indicators**: Shows active power-ups and their remaining time.
 
 ## Sound Design
 
@@ -37,33 +41,30 @@ A 2D Top-Down Space Shooter featuring arcade-style gameplay, colorful visuals, t
 
 ### Sound Effects
 - `shot.ogg`: Triggered when the player fires a bullet.
-- `boom.wav`: Explosion or asteroid break sound.
-- Optional: Add ambient hum or subtle effects for deeper immersion.
-
-### Settings
-- Allow sound/music volume control from the Settings screen.
+- `boom.wav`: Explosion sound when asteroids are destroyed.
 
 ## Core Gameplay Mechanics
 
 ### Controls
 - **Arrow keys** or **W/A/S/D**: Move ship.
-- **Space**: Fire bullet.
+- **Space**: Fire bullet (hold for continuous fire).
 - **P**: Pause game.
 - **M**: Mute background music and effects.
 
 ### Player Mechanics
 - Starts with 3 lives.
 - Fires bullets at fixed intervals (cooldown).
-- Collision with asteroid: lose one life and trigger explosion.
+- Collision with asteroid: lose one life and trigger temporary invincibility.
 
-### Enemy (Asteroid) Mechanics
-- Spawn from top or at slight angles from left/right.
-- Vary in speed and size.
-- Appear in increasing frequency as time progresses.
+### Asteroid Mechanics
+- Spawn from top of screen at random positions.
+- Rotate while falling to simulate tumbling in space.
+- Vary in speed and movement patterns.
+- Appear with increasing frequency as time progresses.
 
 ### Collision Detection
 - Bullet hits asteroid: Destroy both, add score, play boom sound.
-- Asteroid hits player: Reduce life, show explosion, screen shake (optional).
+- Asteroid hits player: Reduce life, trigger invincibility, subtract points.
 
 ## Power-Ups
 
@@ -71,17 +72,17 @@ Spawn randomly from destroyed asteroids:
 
 | Name | Visual Hint | Effect |
 |------|-------------|--------|
-| Double Shot | Purple capsule | Fires two bullets simultaneously |
-| Shield | Blue orb | Temporary invincibility |
-| Speed Boost | Lightning icon | Increases ship movement speed |
-| Extra Life | Heart icon | Adds one life to player's count |
+| Double Shot | Purple square | Fires two bullets simultaneously |
+| Shield | Blue square | Temporary invincibility |
+| Speed Boost | Yellow square | Increases ship movement speed |
+| Extra Life | Red square | Adds one life to player's count |
 
 ## Level Design / Difficulty
 
-Use dynamic difficulty rather than fixed levels:
+Dynamic difficulty system:
 - Asteroid speed increases every 15 seconds.
 - Enemy frequency increases over time.
-- Optional: Introduce a "Boss Asteroid" requiring multiple hits.
+- Score increases as you destroy more asteroids.
 
 ## Scoring System
 
@@ -92,28 +93,34 @@ Use dynamic difficulty rather than fixed levels:
 | Collect a power-up | +20 |
 | Hit by asteroid | -50 |
 
-- Display score top-left in large neon digital style.
-- Optional floating "+10" animations when points are scored.
+- Score cannot go below zero.
+- High score is saved between game sessions.
+- Floating score text animations when points are gained or lost.
 
 ## UI Elements
 
 ### Main Menu
-- Animated background with scrolling stars.
-- Hover effects and subtle button animations.
+- Background image with title.
+- Buttons for Start Game, Best Score, Instructions, Settings, and Quit.
 - Music starts here and loops.
 
+### Best Score Screen
+- Displays the highest score achieved.
+- Back button to return to main menu.
+
 ### Instructions Page
-- Styled with `simkai.ttf`.
-- Icons next to text (e.g., shield icon beside "Shield").
+- Shows controls and game mechanics.
+- Explains power-ups and scoring system.
 
 ### Pause Menu
 - Dark semi-transparent overlay.
-- Centered white "Paused" text with Resume, Main Menu, Quit buttons.
+- Centered "Paused" text with Resume, Main Menu, Quit buttons.
 
 ### Game Over Screen
 - Fade to black after player loses all lives.
-- Show "Mission Failed" or "Victory!" depending on score.
-- Final score, Retry and Main Menu buttons shown.
+- Shows "Mission Failed" or "New High Score!" depending on score.
+- Displays final score and best score.
+- Retry and Main Menu buttons.
 
 ## Project Structure
 
@@ -128,7 +135,9 @@ AstroSpace/
 │   │   ├── bullet.png
 │   │   ├── ship_exploded.png
 │   │   ├── seamless_space.png
-│   │   └── bg_big.png
+│   │   ├── background_menu.jpg
+│   │   ├── bg_big.png
+│   │   └── space3.jpg
 │   └── sounds/
 │       ├── Cool Space Music.mp3
 │       ├── shot.ogg
@@ -137,6 +146,8 @@ AstroSpace/
 ├── player.py
 ├── enemy.py
 ├── bullet.py
+├── powerup.py
+├── ui.py
 ├── config.py
 ├── utils.py
 └── README.md
@@ -146,11 +157,15 @@ AstroSpace/
 
 - [x] Project structure setup
 - [x] Basic player movement
-- [x] Enemy generation
+- [x] Asteroid generation
 - [x] Bullet mechanics
-- [ ] Collision detection
-- [ ] Power-up system
-- [ ] UI implementation
-- [ ] Sound integration
-- [ ] Menu screens
-- [ ] Scoring system
+- [x] Collision detection
+- [x] Power-up system
+- [x] UI implementation
+- [x] Sound integration
+- [x] Menu screens
+- [x] Scoring system
+- [x] High score tracking
+- [ ] Additional power-up graphics
+- [ ] Screen shake effects
+- [ ] Boss asteroids

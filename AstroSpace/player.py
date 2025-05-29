@@ -4,7 +4,16 @@ from config import *
 
 class Player:
     def __init__(self, assets):
-        self.image = assets['player_ship']
+        # Make sure we have valid assets
+        if not assets or 'player_ship' not in assets:
+            print("Warning: Invalid assets provided to Player constructor")
+            # Create a placeholder image if needed
+            placeholder = pygame.Surface((50, 50))
+            placeholder.fill((255, 0, 0))  # Red square
+            self.image = placeholder
+        else:
+            self.image = assets['player_ship']
+            
         self.rect = self.image.get_rect()
         
         # Position the player at the bottom center of the screen
@@ -38,13 +47,13 @@ class Player:
         self.hit_invincibility_end = 0
         
         # Animation
-        self.explosion_anim = assets['explosion_anim']
+        self.explosion_anim = assets.get('explosion_anim', [])
         self.exploding = False
         self.explosion_frame = 0
         
         # Sound effects
-        self.shoot_sound = assets['shoot_sound']
-        self.explosion_sound = assets['explosion_sound']
+        self.shoot_sound = assets.get('shoot_sound', None)
+        self.explosion_sound = assets.get('explosion_sound', None)
     
     def handle_input(self, event):
         # Key press events
@@ -119,8 +128,9 @@ class Player:
                 bullet = Bullet(self.rect.centerx, self.rect.top, -1)
                 bullets_fired.append(bullet)
             
-            # Play shoot sound
-            self.shoot_sound.play()
+            # Play shoot sound if available
+            if self.shoot_sound:
+                self.shoot_sound.play()
             
             return bullets_fired
         
@@ -130,7 +140,8 @@ class Player:
         """Handle player being hit by an enemy"""
         if not self.invincible:
             self.lives -= 1
-            self.explosion_sound.play()
+            if self.explosion_sound:
+                self.explosion_sound.play()
             
             # Temporary invincibility after being hit
             self.invincible = True

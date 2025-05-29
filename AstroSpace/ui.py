@@ -98,6 +98,7 @@ class ScoreDisplay:
         self.font = font
         self.score = 0
         self.displayed_score = 0
+        self.transition_speed = 5  # How fast the score changes visually
     
     def update(self, score):
         """Update the score display"""
@@ -105,7 +106,13 @@ class ScoreDisplay:
         
         # Smoothly transition to the new score
         if self.displayed_score < self.score:
-            self.displayed_score = min(self.displayed_score + 1, self.score)
+            self.displayed_score = min(self.displayed_score + self.transition_speed, self.score)
+        elif self.displayed_score > self.score:
+            self.displayed_score = max(self.displayed_score - self.transition_speed, self.score)
+    
+    def reset(self):
+        """Reset the displayed score to match the actual score immediately"""
+        self.displayed_score = self.score
     
     def draw(self, surface):
         """Draw the score display"""

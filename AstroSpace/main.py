@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pygame
 import sys
+import os
 import random
 from player import Player
 from enemy import Enemy
@@ -23,6 +24,12 @@ class Game:
         
         # Load assets
         self.assets = load_assets()
+        
+        # Load high score first
+        self.high_score = self.load_high_score()
+        
+        # Store final score separately
+        self.final_score = 0
         
         # Game state
         self.state = STATE_SPLASH
@@ -52,11 +59,17 @@ class Game:
         
         # Game variables
         self.score = 0
-        self.last_enemy_spawn = 0
-        self.last_difficulty_increase = 0
-        self.last_survival_bonus = 0
+        self.final_score = 0
+        self.last_enemy_spawn = pygame.time.get_ticks()
+        self.last_difficulty_increase = pygame.time.get_ticks()
+        self.last_survival_bonus = pygame.time.get_ticks()
         self.enemy_speed_multiplier = 1.0
         self.game_over = False
+        
+        # Reset UI elements if they exist
+        if hasattr(self, 'score_display'):
+            self.score_display.score = 0
+            self.score_display.displayed_score = 0
         
         # Spawn initial enemies
         for _ in range(5):
@@ -81,9 +94,10 @@ class Game:
         
         self.menu_buttons = [
             Button(center_x, 200, button_width, button_height, "Start Game", self.main_font, STATE_GAMEPLAY),
-            Button(center_x, 270, button_width, button_height, "Instructions", self.main_font, STATE_INSTRUCTIONS),
-            Button(center_x, 340, button_width, button_height, "Settings", self.main_font, STATE_SETTINGS),
-            Button(center_x, 410, button_width, button_height, "Quit", self.main_font, "quit")
+            Button(center_x, 270, button_width, button_height, "Best Score", self.main_font, STATE_BEST_SCORE),
+            Button(center_x, 340, button_width, button_height, "Instruction", self.main_font, STATE_INSTRUCTIONS),
+            Button(center_x, 410, button_width, button_height, "Settings", self.main_font, STATE_SETTINGS),
+            Button(center_x, 480, button_width, button_height, "Quit", self.main_font, "quit")
         ]
         
         self.pause_buttons = [
@@ -105,13 +119,49 @@ class Game:
         self.settings_buttons = [
             Button(center_x, 500, button_width, button_height, "Back", self.main_font, STATE_MENU)
         ]
+        
+        self.best_score_buttons = [
+            Button(center_x, 500, button_width, button_height, "Back", self.main_font, STATE_MENU)
+        ]
+    
+    def load_high_score(self):
+        """Load the high score from file"""
+        try:
+            if os.path.exists(HIGH_SCORE_FILE):
+                with open(HIGH_SCORE_FILE, 'r') as f:
+                    return int(f.read().strip())
+            return 0
+        except Exception as e:
+            print(f"Error loading high score: {e}")
+            return 0
+    
+    def save_high_score(self):
+        """Save the high score to file"""
+        try:
+            with open(HIGH_SCORE_FILE, 'w') as f:
+                f.write(str(self.high_score))
+        except Exception as e:
+            print(f"Error saving high score: {e}")
+    
+    def update_high_score(self):
+        """Update the high score if the current score is higher"""
+        print(f"Checking high score: current={self.score}, high={self.high_score}")
+        if self.score > self.high_score:
+            print(f"New high score! {self.score}")
+            self.high_score = self.score
+            self.save_high_score()
+            return True
+        return False
     
     def spawn_enemy(self):
         """Spawn a new enemy"""
-        enemy = Enemy(self.assets)
-        # Apply difficulty scaling to enemy speed
-        enemy.speed_y *= self.enemy_speed_multiplier
-        self.enemies.append(enemy)
+        try:
+            enemy = Enemy(self.assets)
+            # Apply difficulty scaling to enemy speed
+            enemy.speed_y *= self.enemy_speed_multiplier
+            self.enemies.append(enemy)
+        except Exception as e:
+            print(f"Error spawning enemy: {e}")
     
     def handle_events(self):
         """Handle game events"""
@@ -151,8 +201,19 @@ class Game:
                     if action:
                         if action == "quit":
                             self.quit_game()
+                        elif action == STATE_GAMEPLAY:
+                            # Make sure the game is reset before starting
+                            self.reset_game()
+                            self.state = action
                         else:
                             self.state = action
+            
+            elif self.state == STATE_BEST_SCORE:
+                for button in self.best_score_buttons:
+                    button.update(mouse_pos)
+                    action = button.handle_event(event)
+                    if action:
+                        self.state = action
             
             elif self.state == STATE_PAUSE:
                 for button in self.pause_buttons:
@@ -161,6 +222,10 @@ class Game:
                     if action:
                         if action == "quit":
                             self.quit_game()
+                        elif action == STATE_MENU:
+                            # Reset the game when going back to the main menu
+                            self.reset_game()
+                            self.state = action
                         else:
                             self.state = action
             
@@ -172,8 +237,15 @@ class Game:
                         if action == "quit":
                             self.quit_game()
                         elif action == "retry":
+                            # Properly reset the game before starting a new one
                             self.reset_game()
+                            # Force the score display to update immediately
+                            self.score_display.displayed_score = 0
                             self.state = STATE_GAMEPLAY
+                        elif action == STATE_MENU:
+                            # Reset the game when going back to the main menu
+                            self.reset_game()
+                            self.state = action
                         else:
                             self.state = action
             
@@ -224,6 +296,11 @@ class Game:
         # Handle enemy destruction
         for enemy in collision_results['enemies_destroyed']:
             if enemy in self.enemies:
+                # Play explosion sound
+                if enemy.explosion_sound:
+                    enemy.explosion_sound.play()
+                
+                # Remove the enemy
                 self.enemies.remove(enemy)
                 
                 # Create floating score text
@@ -272,10 +349,21 @@ class Game:
             
             # Check for game over
             if self.player.is_dead():
+                print(f"Game over! Final score: {self.score}")
+                # Update high score before showing game over screen
+                self.update_high_score()
+                # Store the final score
+                self.final_score = self.score
+                # Force the score display to match the actual score
+                if hasattr(self, 'score_display'):
+                    self.score_display.reset()
                 self.state = STATE_GAME_OVER
         
         # Update score
-        self.score += collision_results['score_change']
+        new_score = self.score + collision_results['score_change']
+        # Ensure score doesn't go below zero
+        self.score = max(0, new_score)
+        # print(f"Current score: {self.score}") 
         
         # Spawn enemies
         if len(self.enemies) < MAX_ENEMIES and current_time - self.last_enemy_spawn > ENEMY_SPAWN_RATE:
@@ -330,6 +418,8 @@ class Game:
             # Show splash screen for a few seconds
             if current_time - self.splash_start_time > 3000:  # 3 seconds
                 self.state = STATE_MENU
+                # Make sure the game is reset when going to the menu
+                self.reset_game()
         
         elif self.state == STATE_GAMEPLAY:
             self.update_gameplay()
@@ -353,13 +443,20 @@ class Game:
     
     def render_menu(self):
         """Render the main menu"""
-        # Draw scrolling background
-        self.screen.blit(self.assets['background'], (0, self.bg_y))
-        self.screen.blit(self.assets['background'], (0, self.bg_y - SCREEN_HEIGHT))
+        # Draw menu background
+        menu_bg = self.assets['background_menu']
         
-        # Draw title
+        # Scale the background to fit the screen if needed
+        if menu_bg.get_width() != SCREEN_WIDTH or menu_bg.get_height() != SCREEN_HEIGHT:
+            menu_bg = pygame.transform.scale(menu_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            
+        self.screen.blit(menu_bg, (0, 0))
+        
+        # Draw title with a slight shadow for better visibility
+        title_shadow = self.large_font.render("ASTRO SPACE", True, BLACK)
         title_text = self.large_font.render("ASTRO SPACE", True, NEON_BLUE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.screen.blit(title_shadow, (title_rect.x + 2, title_rect.y + 2))
         self.screen.blit(title_text, title_rect)
         
         # Draw buttons
@@ -420,15 +517,30 @@ class Game:
         overlay.set_alpha(200)
         self.screen.blit(overlay, (0, 0))
         
+        # Check if we have a new high score
+        is_new_high_score = self.final_score >= self.high_score
+        
         # Draw game over text
-        game_over_text = self.large_font.render("MISSION FAILED", True, RED)
+        if is_new_high_score:
+            game_over_text = self.large_font.render("NEW HIGH SCORE!", True, YELLOW)
+        else:
+            game_over_text = self.large_font.render("MISSION FAILED", True, RED)
+            
         game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
         self.screen.blit(game_over_text, game_over_rect)
         
-        # Draw final score
-        score_text = self.main_font.render(f"Final Score: {self.score}", True, WHITE)
+        # Debug info
+        # print(f"Rendering game over screen. Final score: {self.final_score}, High score: {self.high_score}")
+        
+        # Draw final score - use the stored final score
+        score_text = self.main_font.render(f"Final Score: {self.final_score}", True, WHITE)
         score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.screen.blit(score_text, score_rect)
+        
+        # Draw high score
+        high_score_text = self.main_font.render(f"Best Score: {self.high_score}", True, YELLOW)
+        high_score_rect = high_score_text.get_rect(center=(SCREEN_WIDTH // 2, 240))
+        self.screen.blit(high_score_text, high_score_rect)
         
         # Draw buttons
         for button in self.game_over_buttons:
@@ -436,10 +548,22 @@ class Game:
     
     def render_instructions(self):
         """Render the instructions screen"""
-        self.screen.fill(BLACK)
+        # Use the menu background for instructions too
+        menu_bg = self.assets['background_menu']
+        
+        # Scale the background to fit the screen if needed
+        if menu_bg.get_width() != SCREEN_WIDTH or menu_bg.get_height() != SCREEN_HEIGHT:
+            menu_bg = pygame.transform.scale(menu_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            
+        self.screen.blit(menu_bg, (0, 0))
+        
+        # Add a semi-transparent overlay to make text more readable
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Black with 50% transparency
+        self.screen.blit(overlay, (0, 0))
         
         # Draw title
-        title_text = self.large_font.render("INSTRUCTIONS", True, NEON_BLUE)
+        title_text = self.large_font.render("INSTRUCTION", True, NEON_BLUE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.screen.blit(title_text, title_rect)
         
@@ -479,7 +603,19 @@ class Game:
     
     def render_settings(self):
         """Render the settings screen"""
-        self.screen.fill(BLACK)
+        # Use the menu background for settings too
+        menu_bg = self.assets['background_menu']
+        
+        # Scale the background to fit the screen if needed
+        if menu_bg.get_width() != SCREEN_WIDTH or menu_bg.get_height() != SCREEN_HEIGHT:
+            menu_bg = pygame.transform.scale(menu_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            
+        self.screen.blit(menu_bg, (0, 0))
+        
+        # Add a semi-transparent overlay to make text more readable
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Black with 50% transparency
+        self.screen.blit(overlay, (0, 0))
         
         # Draw title
         title_text = self.large_font.render("SETTINGS", True, NEON_BLUE)
@@ -493,6 +629,36 @@ class Game:
         
         # Draw buttons
         for button in self.settings_buttons:
+            button.draw(self.screen)
+    
+    def render_best_score(self):
+        """Render the best score screen"""
+        # Use the menu background
+        menu_bg = self.assets['background_menu']
+        
+        # Scale the background to fit the screen if needed
+        if menu_bg.get_width() != SCREEN_WIDTH or menu_bg.get_height() != SCREEN_HEIGHT:
+            menu_bg = pygame.transform.scale(menu_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+            
+        self.screen.blit(menu_bg, (0, 0))
+        
+        # Add a semi-transparent overlay to make text more readable
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Black with 50% transparency
+        self.screen.blit(overlay, (0, 0))
+        
+        # Draw title
+        title_text = self.large_font.render("BEST SCORE", True, NEON_BLUE)
+        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.screen.blit(title_text, title_rect)
+        
+        # Draw high score
+        score_text = self.large_font.render(f"{self.high_score}", True, YELLOW)
+        score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, 250))
+        self.screen.blit(score_text, score_rect)
+        
+        # Draw buttons
+        for button in self.best_score_buttons:
             button.draw(self.screen)
     
     def render(self):
@@ -523,6 +689,9 @@ class Game:
         
         elif self.state == STATE_SETTINGS:
             self.render_settings()
+        
+        elif self.state == STATE_BEST_SCORE:
+            self.render_best_score()
         
         # Update the display
         pygame.display.flip()
