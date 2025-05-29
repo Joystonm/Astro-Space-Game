@@ -49,8 +49,8 @@ SOUNDS_DIR = os.path.join(ASSETS_DIR, "sounds")
 FONTS_DIR = os.path.join(ASSETS_DIR, "fonts")
 
 # Image files
-PLAYER_IMG = os.path.join(IMAGES_DIR, "ship.png")
-ENEMY_IMG = os.path.join(IMAGES_DIR, "asteroid.png")
+PLAYER_IMG = os.path.join(IMAGES_DIR, "battle_ship.png")
+ENEMY_IMG = os.path.join(IMAGES_DIR, "asteroid_1.png")
 BULLET_IMG = os.path.join(IMAGES_DIR, "bullet.png")
 BACKGROUND_IMG = os.path.join(IMAGES_DIR, "seamless_space.png")
 BACKGROUND_BIG_IMG = os.path.join(IMAGES_DIR, "bg_big.png")
