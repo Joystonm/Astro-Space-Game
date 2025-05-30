@@ -3,6 +3,7 @@ import pygame
 import sys
 import os
 import random
+import json
 from player import Player
 from enemy import Enemy
 from bullet import Bullet
@@ -19,8 +20,12 @@ class Game:
         pygame.display.set_caption("Astro Space Game")
         
         # Set up the game window
+        self.fullscreen = False
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
+        
+        # Store original window size for toggling fullscreen
+        self.window_size = (SCREEN_WIDTH, SCREEN_HEIGHT)
         
         # Load assets
         self.assets = load_assets()
@@ -50,6 +55,17 @@ class Game:
         # Screen shake effect
         self.screen_shake_offset = (0, 0)
         
+        # Fullscreen confirmation dialog
+        self.show_fullscreen_dialog = False
+        self.dialog_result = None
+        
+        # Load display preferences if enabled
+        if SAVE_DISPLAY_PREFERENCES:
+            try:
+                self.load_display_preferences()
+            except Exception as e:
+                print(f"Error loading display preferences: {e}")
+        
         # Start background music
         if 'background_music' in self.assets and self.assets['background_music']:
             try:
@@ -58,6 +74,52 @@ class Game:
             except pygame.error as e:
                 print(f"Error playing background music: {e}")
                 # Continue without music if there's an error
+    
+    def toggle_fullscreen(self, save_preference=True):
+        """Toggle between fullscreen and windowed mode with smooth transition"""
+        self.fullscreen = not self.fullscreen
+        
+        # Create a fade out effect
+        fade_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        fade_surface.fill((0, 0, 0, 0))
+        
+        # Fade out
+        for alpha in range(0, 128, 8):
+            fade_surface.fill((0, 0, 0, alpha))
+            self.screen.blit(fade_surface, (0, 0))
+            pygame.display.flip()
+            pygame.time.delay(10)
+        
+        # Get current display info for better fullscreen handling
+        display_info = pygame.display.Info()
+        
+        if self.fullscreen:
+            # Save current window size before going fullscreen
+            self.window_size = self.screen.get_size()
+            # Switch to fullscreen mode using native display resolution
+            self.screen = pygame.display.set_mode((display_info.current_w, display_info.current_h), pygame.FULLSCREEN)
+            print(f"Switched to fullscreen: {display_info.current_w}x{display_info.current_h}")
+        else:
+            # Return to windowed mode with previous size
+            self.screen = pygame.display.set_mode(self.window_size)
+            print(f"Switched to windowed mode: {self.window_size[0]}x{self.window_size[1]}")
+        
+        # Recalculate UI positions based on new screen size
+        self.adjust_ui_for_screen()
+        
+        # Save user preference if enabled
+        if save_preference and SAVE_DISPLAY_PREFERENCES:
+            self.save_display_preferences()
+        
+        # Fade back in
+        for alpha in range(128, 0, -8):
+            # Redraw the current screen content
+            self.render()
+            # Apply fade
+            fade_surface.fill((0, 0, 0, alpha))
+            self.screen.blit(fade_surface, (0, 0))
+            pygame.display.flip()
+            pygame.time.delay(10)
     
     def reset_game(self):
         """Reset the game state for a new game"""
@@ -149,6 +211,13 @@ class Game:
             Button(center_x, 350, button_width, button_height, "Back", self.main_font, STATE_MENU)
         ]
         
+        # Fullscreen toggle button for settings
+        fullscreen_text = "Switch to Windowed Mode" if self.fullscreen else "Switch to Fullscreen Mode"
+        self.settings_fullscreen_button = Button(
+            center_x, 280, button_width, button_height, 
+            fullscreen_text, self.small_font, "toggle_fullscreen"
+        )
+        
         # Best score buttons
         self.best_score_buttons = [
             Button(center_x, 350, button_width, button_height, "Back", self.main_font, STATE_MENU)
@@ -158,6 +227,114 @@ class Game:
         self.instructions_buttons = [
             Button(center_x, 500, button_width, button_height, "Back", self.main_font, STATE_MENU)
         ]
+    
+    def adjust_ui_for_screen(self):
+        """Adjust UI elements based on current screen size"""
+        # Get current screen dimensions
+        screen_width, screen_height = self.screen.get_size()
+        
+        # Calculate scale factors compared to original design
+        scale_x = screen_width / SCREEN_WIDTH
+        scale_y = screen_height / SCREEN_HEIGHT
+        
+        # Recalculate UI positions
+        # Health bar
+        if hasattr(self, 'health_bar'):
+            self.health_bar.x = int(screen_width - 150 * scale_x)
+            self.health_bar.y = int(20 * scale_y)
+            self.health_bar.width = int(130 * scale_x)
+            self.health_bar.height = int(20 * scale_y)
+        
+        # Score display
+        if hasattr(self, 'score_display'):
+            self.score_display.x = int(20 * scale_x)
+            self.score_display.y = int(20 * scale_y)
+        
+        # Lives display
+        if hasattr(self, 'lives_display'):
+            self.lives_display.x = int(20 * scale_x)
+            self.lives_display.y = int(60 * scale_y)
+        
+        # Powerup indicator
+        if hasattr(self, 'powerup_indicator'):
+            self.powerup_indicator.x = int(screen_width - 200 * scale_x)
+            self.powerup_indicator.y = int(50 * scale_y)
+        
+        # Energy bar
+        if hasattr(self, 'energy_bar'):
+            self.energy_bar.x = int(20 * scale_x)
+            self.energy_bar.y = int(100 * scale_y)
+            self.energy_bar.width = int(150 * scale_x)
+            self.energy_bar.height = int(20 * scale_y)
+        
+        # Menu buttons
+        button_width, button_height = int(200 * scale_x), int(50 * scale_y)
+        center_x = screen_width // 2 - button_width // 2
+        
+        # Update menu buttons
+        if hasattr(self, 'menu_buttons'):
+            positions = [200, 270, 340, 410, 480]
+            for i, button in enumerate(self.menu_buttons):
+                button.x = center_x
+                button.y = int(positions[i] * scale_y)
+                button.width = button_width
+                button.height = button_height
+        
+        # Update fullscreen button
+        if hasattr(self, 'fullscreen_button'):
+            self.fullscreen_button.x = center_x
+            self.fullscreen_button.y = int(550 * scale_y)
+            self.fullscreen_button.width = button_width
+            self.fullscreen_button.height = button_height
+        
+        # Update pause buttons
+        if hasattr(self, 'pause_buttons'):
+            positions = [250, 320, 390]
+            for i, button in enumerate(self.pause_buttons):
+                button.x = center_x
+                button.y = int(positions[i] * scale_y)
+                button.width = button_width
+                button.height = button_height
+        
+        # Update game over buttons
+        if hasattr(self, 'game_over_buttons'):
+            positions = [350, 420]
+            for i, button in enumerate(self.game_over_buttons):
+                button.x = center_x
+                button.y = int(positions[i] * scale_y)
+                button.width = button_width
+                button.height = button_height
+        
+        # Update settings buttons
+        if hasattr(self, 'settings_buttons'):
+            for button in self.settings_buttons:
+                button.x = center_x
+                button.y = int(350 * scale_y)
+                button.width = button_width
+                button.height = button_height
+        
+        # Update settings fullscreen button
+        if hasattr(self, 'settings_fullscreen_button'):
+            self.settings_fullscreen_button.x = center_x
+            self.settings_fullscreen_button.y = int(280 * scale_y)
+            self.settings_fullscreen_button.width = button_width
+            self.settings_fullscreen_button.height = button_height
+        
+        # Update best score buttons
+        if hasattr(self, 'best_score_buttons'):
+            for button in self.best_score_buttons:
+                button.x = center_x
+                button.y = int(350 * scale_y)
+                button.width = button_width
+                button.height = button_height
+        
+        # Update instructions buttons
+        if hasattr(self, 'instructions_buttons'):
+            for button in self.instructions_buttons:
+                button.x = center_x
+                button.y = int(500 * scale_y)
+                button.width = button_width
+                button.height = button_height
     
     def handle_events(self):
         """Handle game events"""
@@ -182,6 +359,16 @@ class Game:
                         pygame.mixer.music.pause()
                     else:
                         pygame.mixer.music.unpause()
+                
+                # Toggle fullscreen with F1 key
+                if event.key == pygame.K_F1:
+                    # Show confirmation dialog
+                    new_mode = "windowed" if self.fullscreen else "fullscreen"
+                    self.show_confirmation_dialog(
+                        f"Switch to {new_mode} mode?",
+                        lambda: self.toggle_fullscreen(True),
+                        None
+                    )
                 
                 # Energy Blast trigger with X key
                 if event.key == pygame.K_x and self.state == STATE_GAMEPLAY:
@@ -249,6 +436,17 @@ class Game:
                     action = button.handle_event(event)
                     if action:
                         self.state = action
+                
+                # Handle fullscreen button in settings
+                self.settings_fullscreen_button.update(mouse_pos)
+                action = self.settings_fullscreen_button.handle_event(event)
+                if action == "toggle_fullscreen":
+                    new_mode = "windowed" if self.fullscreen else "fullscreen"
+                    self.show_confirmation_dialog(
+                        f"Switch to {new_mode} mode?",
+                        lambda: self.toggle_fullscreen(True),
+                        None
+                    )
             
             elif self.state == STATE_BEST_SCORE:
                 for button in self.best_score_buttons:
@@ -263,6 +461,95 @@ class Game:
                     action = button.handle_event(event)
                     if action:
                         self.state = action
+    
+    def show_confirmation_dialog(self, message, yes_action, no_action=None):
+        """Show a confirmation dialog with Yes/No options"""
+        # Create a semi-transparent overlay
+        overlay = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 192))  # Semi-transparent black
+        self.screen.blit(overlay, (0, 0))
+        
+        # Get current screen dimensions
+        screen_width, screen_height = self.screen.get_size()
+        
+        # Calculate scale factors
+        scale_x = screen_width / SCREEN_WIDTH
+        scale_y = screen_height / SCREEN_HEIGHT
+        
+        # Create dialog box
+        dialog_width, dialog_height = int(400 * scale_x), int(200 * scale_y)
+        dialog_x = (screen_width - dialog_width) // 2
+        dialog_y = (screen_height - dialog_height) // 2
+        
+        # Draw dialog background
+        dialog_bg = pygame.Surface((dialog_width, dialog_height))
+        dialog_bg.fill((50, 50, 50))  # Dark gray
+        pygame.draw.rect(dialog_bg, (200, 200, 200), (0, 0, dialog_width, dialog_height), 3)  # Light gray border
+        self.screen.blit(dialog_bg, (dialog_x, dialog_y))
+        
+        # Draw message
+        message_font = pygame.font.Font(None, int(30 * scale_y))
+        message_text = message_font.render(message, True, WHITE)
+        message_rect = message_text.get_rect(center=(screen_width // 2, dialog_y + dialog_height // 3))
+        self.screen.blit(message_text, message_rect)
+        
+        # Create buttons
+        button_width, button_height = int(100 * scale_x), int(40 * scale_y)
+        button_y = dialog_y + int(dialog_height * 0.65)
+        
+        # Yes button
+        yes_button_x = dialog_x + dialog_width // 4 - button_width // 2
+        yes_button = pygame.Rect(yes_button_x, button_y, button_width, button_height)
+        pygame.draw.rect(self.screen, (100, 200, 100), yes_button)  # Green
+        pygame.draw.rect(self.screen, (200, 255, 200), yes_button, 2)  # Light green border
+        
+        yes_text = message_font.render("Yes", True, WHITE)
+        yes_text_rect = yes_text.get_rect(center=yes_button.center)
+        self.screen.blit(yes_text, yes_text_rect)
+        
+        # No button
+        no_button_x = dialog_x + dialog_width * 3 // 4 - button_width // 2
+        no_button = pygame.Rect(no_button_x, button_y, button_width, button_height)
+        pygame.draw.rect(self.screen, (200, 100, 100), no_button)  # Red
+        pygame.draw.rect(self.screen, (255, 200, 200), no_button, 2)  # Light red border
+        
+        no_text = message_font.render("No", True, WHITE)
+        no_text_rect = no_text.get_rect(center=no_button.center)
+        self.screen.blit(no_text, no_text_rect)
+        
+        # Update display
+        pygame.display.flip()
+        
+        # Wait for user input
+        waiting = True
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.quit_game()
+                
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mouse_pos = pygame.mouse.get_pos()
+                    
+                    if yes_button.collidepoint(mouse_pos):
+                        waiting = False
+                        if yes_action:
+                            yes_action()
+                    
+                    elif no_button.collidepoint(mouse_pos):
+                        waiting = False
+                        if no_action:
+                            no_action()
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN or event.key == pygame.K_y:
+                        waiting = False
+                        if yes_action:
+                            yes_action()
+                    
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_n:
+                        waiting = False
+                        if no_action:
+                            no_action()
     
     def update_gameplay(self):
         """Update game objects during gameplay"""
@@ -437,6 +724,11 @@ class Game:
         mouse_pos = pygame.mouse.get_pos()
         for button in self.settings_buttons:
             button.update(mouse_pos)
+        
+        # Update fullscreen button text
+        fullscreen_text = "Switch to Windowed Mode" if self.fullscreen else "Switch to Fullscreen Mode"
+        self.settings_fullscreen_button.text = fullscreen_text
+        self.settings_fullscreen_button.update(mouse_pos)
     
     def update_best_score(self):
         """Update best score screen"""
@@ -507,6 +799,11 @@ class Game:
         # Draw buttons
         for button in self.menu_buttons:
             button.draw(self.screen)
+        
+        # Draw F1 shortcut hint
+        hint_text = self.small_font.render("Press F1 to toggle fullscreen mode", True, (200, 200, 200))
+        hint_rect = hint_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30))
+        self.screen.blit(hint_text, hint_rect)
     
     def render_gameplay(self):
         """Render the gameplay screen"""
@@ -608,10 +905,25 @@ class Game:
         self.screen.blit(title_text, title_rect)
         
         # Draw settings options
-        # (Placeholder for now)
-        settings_text = self.main_font.render("Settings options will be added here.", True, WHITE)
-        settings_rect = settings_text.get_rect(center=(SCREEN_WIDTH // 2, 250))
+        settings_text = self.main_font.render("Display Settings", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(SCREEN_WIDTH // 2, 200))
         self.screen.blit(settings_text, settings_rect)
+        
+        # Draw fullscreen option
+        self.settings_fullscreen_button.draw(self.screen)
+        
+        # Draw current display mode
+        mode_text = "Current mode: " + ("Fullscreen" if self.fullscreen else "Windowed")
+        mode_display = self.small_font.render(mode_text, True, WHITE)
+        mode_rect = mode_display.get_rect(center=(SCREEN_WIDTH // 2, 240))
+        self.screen.blit(mode_display, mode_rect)
+        
+        # Draw resolution info
+        current_w, current_h = self.screen.get_size()
+        res_text = f"Resolution: {current_w}x{current_h}"
+        res_display = self.small_font.render(res_text, True, WHITE)
+        res_rect = res_display.get_rect(center=(SCREEN_WIDTH // 2, 320))
+        self.screen.blit(res_display, res_rect)
         
         # Draw buttons
         for button in self.settings_buttons:
@@ -661,6 +973,7 @@ class Game:
             "Space: Fire bullets",
             "P: Pause game",
             "M: Mute sound",
+            "F1: Toggle fullscreen",
             "X: Trigger Energy Blast (when fully charged)",
             "",
             "Destroy asteroids to earn points and energy",
@@ -730,8 +1043,56 @@ class Game:
         except Exception as e:
             print(f"Error saving high score: {e}")
     
+    def load_display_preferences(self):
+        """Load display preferences from file"""
+        try:
+            if os.path.exists(DISPLAY_PREFERENCES_FILE):
+                with open(DISPLAY_PREFERENCES_FILE, 'r') as f:
+                    prefs = json.load(f)
+                
+                # Apply saved preferences
+                self.fullscreen = prefs.get('fullscreen', False)
+                saved_size = prefs.get('window_size', (SCREEN_WIDTH, SCREEN_HEIGHT))
+                self.window_size = (int(saved_size[0]), int(saved_size[1]))
+                
+                # Apply display mode
+                if self.fullscreen:
+                    display_info = pygame.display.Info()
+                    self.screen = pygame.display.set_mode(
+                        (display_info.current_w, display_info.current_h), 
+                        pygame.FULLSCREEN
+                    )
+                else:
+                    self.screen = pygame.display.set_mode(self.window_size)
+                
+                print(f"Display preferences loaded: fullscreen={self.fullscreen}, size={self.window_size}")
+                return True
+        except Exception as e:
+            print(f"Error loading display preferences: {e}")
+        
+        return False
+    
+    def save_display_preferences(self):
+        """Save display preferences to file"""
+        try:
+            prefs = {
+                'fullscreen': self.fullscreen,
+                'window_size': self.window_size
+            }
+            
+            with open(DISPLAY_PREFERENCES_FILE, 'w') as f:
+                json.dump(prefs, f)
+                
+            print(f"Display preferences saved: fullscreen={self.fullscreen}, size={self.window_size}")
+        except Exception as e:
+            print(f"Error saving display preferences: {e}")
+    
     def quit_game(self):
         """Quit the game"""
+        # Save display preferences before quitting
+        if SAVE_DISPLAY_PREFERENCES:
+            self.save_display_preferences()
+        
         pygame.quit()
         sys.exit()
     

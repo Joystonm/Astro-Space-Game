@@ -41,6 +41,7 @@ A 2D space shooter game featuring arcade-style gameplay, colorful visuals, thril
 - **P**: Pause game.
 - **M**: Mute background music and effects.
 - **X**: Energy Blast.
+- **F11**: Energy Blast.
 
 ### Player Mechanics
 

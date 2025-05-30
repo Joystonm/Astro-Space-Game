@@ -107,3 +107,8 @@ ENERGY_BLAST_RADIUS = 175
 ENERGY_BLAST_DURATION = 15  # frames
 BLAST_SLOW_MOTION_DURATION = 30  # frames
 SCORE_BLAST_BONUS = 10  # Bonus points per asteroid destroyed by energy blast
+
+# Fullscreen settings
+FULLSCREEN_TRANSITION_DURATION = 300  # milliseconds
+SAVE_DISPLAY_PREFERENCES = True
+DISPLAY_PREFERENCES_FILE = os.path.join(BASE_DIR, "display_prefs.json")

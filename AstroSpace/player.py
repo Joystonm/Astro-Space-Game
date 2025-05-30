@@ -43,6 +43,9 @@ class Player:
             'speed': 0
         }
         
+        # Dictionary to track active powerups for UI
+        self.active_powerups = {}
+        
         # Invincibility after hit
         self.hit_invincibility_end = 0
         
@@ -109,6 +112,18 @@ class Player:
         
         if self.speed > PLAYER_SPEED and current_time > self.powerup_end_times['speed']:
             self.speed = PLAYER_SPEED
+        
+        # Update active_powerups dictionary for UI
+        self.active_powerups = {}
+        if self.double_shot:
+            self.active_powerups['Double Shot'] = self.powerup_end_times['double'] - current_time
+        if self.invincible:
+            if current_time <= self.powerup_end_times['shield']:
+                self.active_powerups['Shield'] = self.powerup_end_times['shield'] - current_time
+            elif current_time <= self.hit_invincibility_end:
+                self.active_powerups['Invincibility'] = self.hit_invincibility_end - current_time
+        if self.speed > PLAYER_SPEED:
+            self.active_powerups['Speed Boost'] = self.powerup_end_times['speed'] - current_time
         
         # Update position
         self.rect.x += self.dx
