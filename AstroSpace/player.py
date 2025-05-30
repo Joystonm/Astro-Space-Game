@@ -54,6 +54,24 @@ class Player:
         # Sound effects
         self.shoot_sound = assets.get('shoot_sound', None)
         self.explosion_sound = assets.get('explosion_sound', None)
+        
+        # Energy Blast mechanic
+        self.energy = 0
+        self.max_energy = ENERGY_MAX
+        self.is_blasting = False
+        self.blast_frame = 0
+        self.blast_max_frames = ENERGY_BLAST_DURATION
+        self.blast_radius = ENERGY_BLAST_RADIUS
+        self.screen_shake = 0
+        
+        # Energy Blast mechanic
+        self.energy = 0
+        self.max_energy = ENERGY_MAX
+        self.is_blasting = False
+        self.blast_frame = 0
+        self.blast_max_frames = ENERGY_BLAST_DURATION
+        self.blast_radius = ENERGY_BLAST_RADIUS
+        self.screen_shake = 0
     
     def handle_input(self, event):
         # Key press events
@@ -165,3 +183,120 @@ class Player:
         # Draw shield effect if active
         if self.invincible and pygame.time.get_ticks() <= self.powerup_end_times['shield']:
             pygame.draw.circle(surface, BLUE, self.rect.center, self.rect.width // 2 + 5, 2)
+    
+    # Energy Blast mechanic methods
+    def add_energy(self, amount=1):
+        """Add energy to the player's energy meter"""
+        self.energy = min(self.energy + amount, self.max_energy)
+        return self.energy >= self.max_energy
+    
+    def trigger_blast(self):
+        """Trigger the energy blast if enough energy is available"""
+        if self.energy >= self.max_energy and not self.is_blasting:
+            self.is_blasting = True
+            self.blast_frame = 0
+            self.energy = 0
+            self.screen_shake = 10
+            # Play blast sound if available
+            if self.explosion_sound:
+                self.explosion_sound.play()
+            return True
+        return False
+    
+    def update_blast(self, enemies):
+        """Update the energy blast animation and check for collisions"""
+        if not self.is_blasting:
+            return 0
+        
+        self.blast_frame += 1
+        current_radius = (self.blast_frame / self.blast_max_frames) * self.blast_radius
+        
+        # Check for enemy collisions with the blast
+        enemies_destroyed = 0
+        for enemy in enemies[:]:
+            distance = ((enemy.rect.centerx - self.rect.centerx) ** 2 + 
+                       (enemy.rect.centery - self.rect.centery) ** 2) ** 0.5
+            if distance <= current_radius:
+                enemies.remove(enemy)
+                enemies_destroyed += 1
+        
+        # End blast animation when complete
+        if self.blast_frame >= self.blast_max_frames:
+            self.is_blasting = False
+        
+        return enemies_destroyed
+    
+    def draw_blast(self, surface):
+        """Draw the energy blast effect"""
+        if not self.is_blasting:
+            return
+        
+        current_radius = (self.blast_frame / self.blast_max_frames) * self.blast_radius
+        alpha = 255 - int((self.blast_frame / self.blast_max_frames) * 200)
+        
+        # Create a surface for the blast with transparency
+        blast_surface = pygame.Surface((current_radius * 2, current_radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(blast_surface, (200, 230, 255, alpha), 
+                         (current_radius, current_radius), current_radius)
+        
+        # Draw the blast centered on the player
+        surface.blit(blast_surface, 
+                   (self.rect.centerx - current_radius, self.rect.centery - current_radius))
+    # Energy Blast mechanic methods
+    def add_energy(self, amount=1):
+        """Add energy to the player's energy meter"""
+        self.energy = min(self.energy + amount, self.max_energy)
+        return self.energy >= self.max_energy
+    
+    def trigger_blast(self):
+        """Trigger the energy blast if enough energy is available"""
+        if self.energy >= self.max_energy and not self.is_blasting:
+            self.is_blasting = True
+            self.blast_frame = 0
+            self.energy = 0
+            self.screen_shake = 10
+            # Play blast sound if available
+            if self.explosion_sound:
+                self.explosion_sound.play()
+            return True
+        return False
+    
+    def update_blast(self, enemies):
+        """Update the energy blast animation and check for collisions"""
+        if not self.is_blasting:
+            return 0
+        
+        self.blast_frame += 1
+        current_radius = (self.blast_frame / self.blast_max_frames) * self.blast_radius
+        
+        # Check for enemy collisions with the blast
+        enemies_destroyed = 0
+        for enemy in enemies[:]:
+            distance = ((enemy.rect.centerx - self.rect.centerx) ** 2 + 
+                       (enemy.rect.centery - self.rect.centery) ** 2) ** 0.5
+            if distance <= current_radius:
+                enemies.remove(enemy)
+                enemies_destroyed += 1
+        
+        # End blast animation when complete
+        if self.blast_frame >= self.blast_max_frames:
+            self.is_blasting = False
+        
+        return enemies_destroyed
+    
+    def draw_blast(self, surface):
+        """Draw the energy blast effect"""
+        if not self.is_blasting:
+            return
+        
+        current_radius = (self.blast_frame / self.blast_max_frames) * self.blast_radius
+        alpha = 255 - int((self.blast_frame / self.blast_max_frames) * 200)
+        
+        # Create a surface for the blast with transparency
+        blast_surface = pygame.Surface((current_radius * 2, current_radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(blast_surface, (200, 230, 255, alpha), 
+                         (current_radius, current_radius), current_radius)
+        
+        # Draw the blast centered on the player
+        surface.blit(blast_surface, 
+                   (self.rect.centerx - current_radius, self.rect.centery - current_radius))

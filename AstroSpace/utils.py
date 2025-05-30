@@ -184,67 +184,58 @@ def load_assets():
         pygame.mixer.init()
         assets['shoot_sound'] = load_sound(SHOOT_SOUND)
         assets['explosion_sound'] = load_sound(EXPLOSION_SOUND)
-        assets['background_music'] = load_sound(BACKGROUND_MUSIC)
         assets['powerup_sound'] = load_sound(POWERUP_SOUND)
+        
+        # Handle background music separately to avoid pygame.error
+        if os.path.exists(BACKGROUND_MUSIC):
+            assets['background_music'] = BACKGROUND_MUSIC
+        else:
+            print(f"Background music file not found: {BACKGROUND_MUSIC}")
+            assets['background_music'] = None
     except Exception as e:
         print(f"Error loading sounds: {e}")
         # Create dummy sounds
         dummy_sound = pygame.mixer.Sound(buffer=bytearray(100))
         assets['shoot_sound'] = dummy_sound
         assets['explosion_sound'] = dummy_sound
-        assets['background_music'] = dummy_sound
         assets['powerup_sound'] = dummy_sound
+        assets['background_music'] = None
     
     # Load fonts
     try:
         assets['main_font'] = load_font(MAIN_FONT, 36)
-        assets['small_font'] = load_font(MAIN_FONT, 24)
-        assets['large_font'] = load_font(MAIN_FONT, 48)
     except Exception as e:
         print(f"Error loading fonts: {e}")
         # Use default font
         assets['main_font'] = pygame.font.Font(None, 36)
-        assets['small_font'] = pygame.font.Font(None, 24)
-        assets['large_font'] = pygame.font.Font(None, 48)
     
     return assets
 
-def create_floating_text(text, position, color=WHITE, size=20, duration=1000):
-    """Create a floating text object that rises and fades."""
+def create_floating_text(text, position, color=WHITE, duration=60, speed=1):
+    """Create a floating text effect."""
     return {
         'text': text,
-        'position': list(position),
+        'position': position,
         'color': color,
-        'size': size,
-        'alpha': 255,
-        'creation_time': pygame.time.get_ticks(),
-        'duration': duration
+        'duration': duration,
+        'speed': speed,
+        'alpha': 255
     }
 
 def update_floating_texts(floating_texts):
-    """Update all floating text objects."""
-    current_time = pygame.time.get_ticks()
+    """Update all floating text effects."""
     for text in floating_texts[:]:
-        # Calculate age as a percentage of total duration
-        age_pct = (current_time - text['creation_time']) / text['duration']
+        text['position'] = (text['position'][0], text['position'][1] - text['speed'])
+        text['duration'] -= 1
+        text['alpha'] = int(255 * (text['duration'] / 60))
         
-        if age_pct >= 1.0:
+        if text['duration'] <= 0:
             floating_texts.remove(text)
-        else:
-            # Move text upward
-            text['position'][1] -= 1
-            
-            # Fade out text
-            text['alpha'] = 255 * (1 - age_pct)
 
-def draw_floating_texts(surface, floating_texts, font):
-    """Draw all floating text objects."""
+def draw_floating_texts(surface, floating_texts):
+    """Draw all floating text effects."""
+    font = pygame.font.Font(None, 24)
     for text in floating_texts:
-        # Create a surface with the text
         text_surface = font.render(text['text'], True, text['color'])
-        
-        # Set the alpha value
         text_surface.set_alpha(text['alpha'])
-        
-        # Draw the text
         surface.blit(text_surface, text['position'])

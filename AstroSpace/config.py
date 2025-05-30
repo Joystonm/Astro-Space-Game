@@ -85,3 +85,25 @@ STATE_BEST_SCORE = 7
 
 # High score file
 HIGH_SCORE_FILE = os.path.join(BASE_DIR, "high_score.txt")
+
+# Energy Blast settings
+ENERGY_MAX = 10
+ENERGY_BLAST_RADIUS = 175
+ENERGY_BLAST_DURATION = 15  # frames
+BLAST_SLOW_MOTION_DURATION = 30  # frames
+SCORE_BLAST_BONUS = 10  # Bonus points per asteroid destroyed by energy blast
+# Energy Blast settings
+ENERGY_MAX = 10
+ENERGY_BLAST_RADIUS = 175
+ENERGY_BLAST_DURATION = 15  # frames
+BLAST_SLOW_MOTION_DURATION = 30  # frames
+SCORE_BLAST_BONUS = 10  # Bonus points per asteroid destroyed by energy blast
+
+# Sound files for Energy Blast
+BLAST_SOUND = os.path.join(SOUNDS_DIR, "boom.wav")  # Reusing explosion sound for now
+# Energy Blast settings
+ENERGY_MAX = 10
+ENERGY_BLAST_RADIUS = 175
+ENERGY_BLAST_DURATION = 15  # frames
+BLAST_SLOW_MOTION_DURATION = 30  # frames
+SCORE_BLAST_BONUS = 10  # Bonus points per asteroid destroyed by energy blast
