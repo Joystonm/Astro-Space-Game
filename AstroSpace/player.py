@@ -4,23 +4,19 @@ from config import *
 
 class Player:
     def __init__(self, assets):
-        # Make sure we have valid assets
         if not assets or 'player_ship' not in assets:
             print("Warning: Invalid assets provided to Player constructor")
-            # Create a placeholder image if needed
             placeholder = pygame.Surface((50, 50))
-            placeholder.fill((255, 0, 0))  # Red square
+            placeholder.fill((255, 0, 0))  
             self.image = placeholder
         else:
             self.image = assets['player_ship']
             
         self.rect = self.image.get_rect()
         
-        # Position the player at the bottom center of the screen
         self.rect.centerx = SCREEN_WIDTH // 2
         self.rect.bottom = SCREEN_HEIGHT - 20
         
-        # Movement attributes
         self.speed = PLAYER_SPEED
         self.dx = 0
         self.dy = 0

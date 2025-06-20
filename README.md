@@ -21,12 +21,11 @@ A 2D space shooter game featuring arcade-style gameplay, colorful visuals, thril
 
 ## Installation
 
-1. Clone this repository
-2. Install the required packages:
+1. Install the required packages:
    ```
    pip install pygame
    ```
-3. Run the game:
+2. Run the game:
    ```
    cd AstroSpace
    python main.py
